@@ -79,12 +79,18 @@ def io_get_directions(query):
         result = r.json()
         if result.get('status') == 'OK':
             LOG.info('Sending directions to client. {}'.format(result.get('routes')))
-            emit('directions', result.get('routes'))
+            emit('directions', {
+                'status': 'ok',
+                'routes': result.get('routes'),
+                })
             return
         else:
             LOG.error(u'Failed GET request to {}'.format(url))
 
-        emit('directions:error', result.get('error_message', 'An unknown error occurred.'))
+        emit('directions', {
+            'status': 'error',
+            'error_message': result.get('error_message', 'An unknown error occurred.'),
+            })
     else:
         LOG.error(u'Failed GET request to {} - status_code = {}'.format(url, r.status_code))
         pass

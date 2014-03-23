@@ -1,10 +1,9 @@
-# model contains a location
-# location can be one of:
+# all asynchronous model properties contain a status
+# # variable which can take one of the following states:
 #   'none'
-#   'working'
+#   'waiting'
 #   'found'
-#   'failed'
-# TODO: handle motion
+#   'error'
 
 geoSuccess = (current_location) ->
   if current_location
@@ -25,7 +24,7 @@ geoError = () ->
     location:
       timestamp: (new Date()).getTime() / 1000.0
       coords: null
-      status: 'failed'
+      status: 'error'
 
 geoOptions =
   enableHighAccuracy: true
@@ -46,16 +45,17 @@ socket.on 'connect', ->
     location: model.get('location')
 
 socket.on 'bike-parking-results', (results) ->
-  console.dir('bike-parking-results')
+  console.log('bike-parking-results')
   console.dir(results)
   model.set
    parking_spots: results
    selected_spot: if (results.length > 0) then results[0].id else null
 
 socket.on 'directions', (data) ->
+  console.log('directions')
   console.dir(data)
   model.set
-   routes: data
+   directions: data
 
 
 # Initialize the client side app model
@@ -65,36 +65,44 @@ socket.on 'directions', (data) ->
   parking_spots:
     status: 'none'
   selected_spot: null
+  directions:
+    status: 'none'
 
 $ ->
   model.set
     location:
-      status: 'working'
+      status: 'waiting'
   navigator?.geolocation?.getCurrentPosition geoSuccess, geoError, geoOptions
 
 
-getDirections = () ->
+getDirections = (model) ->
   # Let's query the server for directions.
   # First, let's make sure we know where we're going and where we are
   parking_spots = model.get('parking_spots')
   current_location = model.get('location')
+  selected_spot = model.get('selected_spot')
 
-  if parking_spots?.length > 0 && current_location?.status is 'found'
-    parking_spot = parking_spots[0]
+  if selected_spot and parking_spots?.status is 'ok' and current_location?.status is 'found'
+    parking_spot = _.find parking_spots.locations, id: selected_spot
     model.set
       directions:
-        status: 'working'
+        status: 'waiting'
 
     socket.emit 'get-directions',
       origin:
         latitude: current_location.coords.latitude
         longitude: current_location.coords.longitude
       destination:
-        latitude: parking_spot.bike_parking.coord_latitude
-        longitude: parking_spot.bike_parking.coord_longitude
+        latitude: parking_spot.coord_latitude
+        longitude: parking_spot.coord_longitude
       travel_mode: 'bicycling'
   else
     console.warn "We don't yet have results from our bike-parking query."
 
+selectSpot = (model, spot) ->
+  if model.get('selected_spot') isnt spot.id
+    model.set
+      selected_spot: spot.id
+    getDirections model
 
 @socket = socket

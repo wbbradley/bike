@@ -1,24 +1,7 @@
 /** @jsx React.DOM */
 var d = React.DOM
 
-var Navbar = React.createClass({
-	getInitialState: function() {
-		return this.props.model.toJSON()
-	},
-	handleModelChange: function() {
-		this.setState(this.props.model.toJSON())
-	},
-	componentDidMount: function() {
-		console.log('Navbar:componentDidMount')
-		if (!('changeHandler' in this)) {
-			this.changeHandler = _.bind(this.handleModelChange, this)
-		}
-		model.on('change', this.changeHandler)
-	},
-	componentWillUnmount: function() {
-		console.log('Navbar:componentDidUnmount')
-		model.off('change', this.changeHandler)
-	},
+var Navbar = React.createBackboneClass({
 	render: function() {
 		return (
 			<div className="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -39,36 +22,21 @@ var Navbar = React.createClass({
 })
 
 
-var YourLocation = React.createClass({
-	getInitialState: function() {
-		return this.props.model.toJSON()
-	},
-	handleModelChange: function() {
-		this.setState(this.props.model.toJSON())
-	},
-	componentDidMount: function() {
-		console.log('YourLocation:componentDidMount')
-		if (!('changeHandler' in this)) {
-			this.changeHandler = _.bind(this.handleModelChange, this)
-		}
-		model.on('change', this.changeHandler)
-	},
-	componentWillUnmount: function() {
-		console.log('YourLocation:componentDidUnmount')
-		model.off('change', this.changeHandler)
-	},
+var YourLocation = React.createBackboneClass({
+	// TODO (optimization) changeOptions: "change:location",
 	render: function() {
-		if (this.state.location.status == 'found') {
+		var location = this.props.model.get('location')
+		if (location.status == 'found') {
 			return (
 				<div className="alert alert-success">
-					<h2>Your location is {this.state.location.coords.latitude}, {this.state.location.coords.longitude}</h2>
+					<h2>Your location is {location.coords.latitude}, {location.coords.longitude}</h2>
 				</div>
 				)
-		} else if (this.state.location.status == 'none') {
+		} else if (location.status == 'none') {
 			return <div className="alert alert-info">Your location is unknown.</div>
-		} else if (this.state.location.status == 'working') {
+		} else if (location.status == 'waiting') {
 			return <div className="alert alert-info">Working on locating you...</div>
-		} else if (this.state.location.status == 'failed') {
+		} else if (location.status == 'error') {
 			return <div className="alert alert-warning">Failed to locate you.</div>
 		} else {
 			return <div className="alert alert-danger">Unexpected location status</div>
@@ -77,36 +45,25 @@ var YourLocation = React.createClass({
 })
 
 
-var ParkingSpots = React.createClass({
-	getInitialState: function() {
-		return this.props.model.toJSON()
-	},
-	handleModelChange: function() {
-		this.setState(this.props.model.toJSON())
-	},
-	componentDidMount: function() {
-		console.log('ParkingSpots:componentDidMount')
-		if (!('changeHandler' in this)) {
-			this.changeHandler = _.bind(this.handleModelChange, this)
-		}
-		model.on('change', this.changeHandler)
-	},
-	componentWillUnmount: function() {
-		console.log('ParkingSpots:componentDidUnmount')
-		model.off('change', this.changeHandler)
-	},
+var ParkingSpots = React.createBackboneClass({
 	genClickHandler: function(spot) {
 		var _this = this
 		return function () {
-			_this.props.model.set({selected_spot: spot.id})
+			// The basic idea here of not implementing all the control
+			// logic in this class is just a general separation of view
+			// and view-controller -> model-changing concerns.
+			selectSpot(_this.props.model, spot)
 		}
 	},
 	render: function() {
 		var locationNodes, _this = this
-		if (this.state.parking_spots.status == 'ok') {
-			locationNodes = this.state.parking_spots.locations.map(function(spot) {
+		var parking_spots = this.props.model.get('parking_spots')
+		var selected_spot = this.props.model.get('selected_spot')
+
+		if (parking_spots.status == 'ok') {
+			locationNodes = parking_spots.locations.map(function(spot) {
 				var className = "list-group-item spot"
-				if (_this.state.selected_spot == spot.id) {
+				if (selected_spot == spot.id) {
 					className += " active"
 				}
 				return (
@@ -124,40 +81,26 @@ var ParkingSpots = React.createClass({
 					</div>
 				</div>
 				)
-		} else if (this.state.parking_spots.status == 'error') {
-			return <div className="alert alert-warning">{this.state.parking_spots.error_message}</div>
+		} else if (parking_spots.status == 'error') {
+			return <div className="alert alert-warning">{parking_spots.error_message}</div>
 		} else {
 			return <div className="alert alert-danger">Unexpected parking spots status.</div>
 		}
 	}
 })
 
-var Directions = React.createClass({
-	getInitialState: function() {
-		return this.props.model.toJSON()
-	},
-	handleModelChange: function() {
-		this.setState(this.props.model.toJSON())
-	},
-	componentDidMount: function() {
-		console.log('Directions:componentDidMount')
-		if (!('changeHandler' in this)) {
-			this.changeHandler = _.bind(this.handleModelChange, this)
-		}
-		model.on('change', this.changeHandler)
-	},
-	componentWillUnmount: function() {
-		console.log('Directions:componentDidUnmount')
-		model.off('change', this.changeHandler)
-	},
+var Directions = React.createBackboneClass({
 	render: function() {
 		var legsNodes, routes, route
-		if (this.state && 'routes' in this.state) {
-			routes = this.state.routes
+		var directions = this.props.model.get('directions')
+		var selected_spot = this.props.model.get('selected_spot')
+
+		if (directions.status == 'ok') {
+			routes = directions.routes
 			// TODO for the moment we are choosing the
 			// first route, eventually, we'd like folks
 			// to be able to pick other routes
-			route = routes.length ? routes[0] : null
+			route = routes[0]
 			if (route && 'legs' in route) {
 				legsNodes = route.legs.map(function (leg) {
 					var stepsNodes = leg.steps.map(function (step) {
