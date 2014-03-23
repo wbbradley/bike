@@ -66,7 +66,7 @@ class Location(BaseModel):
     coord_longitude = DecimalField()
 
     def coords(self):
-        return (self.coord_longitude, self.coord_latitude)
+        return (self.coord_latitude, self.coord_longitude)
 
     def serialize(self, opts=None):
         return {

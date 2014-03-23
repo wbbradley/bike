@@ -2,8 +2,10 @@ from flask import Flask, render_template
 from flaskext.lesscss import lesscss
 from flask.ext.socketio import SocketIO, emit
 from models import import_location_data, Location, haversine
-
+import requests
 import logging
+
+
 LOG = logging.getLogger('bike')
 
 global app
@@ -46,17 +48,34 @@ def io_find_nearest_query(query):
                     'bike_parking': location.serialize()
                     })
             limit = query.get('limit')
-            emit('query-results', sorted(results, key=lambda x:x['km_distance'])[:limit])
+            emit('bike-parking-results', sorted(results, key=lambda x:x['km_distance'])[:limit])
         else:
             LOG.error("No lat/lon in location query")
 
 
 @socketio.on('get-directions', namespace='/live')
 def io_get_directions(query):
-    # HACK
-    emit('directions', [location.coords() for location in Location.select().limit(4)])
+    url = 'http://maps.googleapis.com/maps/api/directions/json?origin={},{}&destination={},{}&sensor=true&mode={}'.format(
+        query['origin']['latitude'],
+        query['origin']['longitude'],
+        query['destination']['latitude'],
+        query['destination']['longitude'],
+        query['travel_mode']
+        )
+    r = requests.get(url)
+    if 200 <= r.status_code < 300:
+        result = r.json()
+        if result.get('status') == 'OK':
+            LOG.info('Sending directions to client. {}'.format(result.get('routes')))
+            emit('directions', result.get('routes'))
+            return
+        else:
+            LOG.error(u'Failed GET request to {}'.format(url))
 
-    # http://open.mapquestapi.com/directions/v2/route?key=YOUR_KEY_HERE&ambiguities=ignore&from=Lancaster,PA&to=York,PA&callback=renderNarrativeP
+        emit('directions:error', result.get('error_message', 'An unknown error occurred.'))
+    else:
+        LOG.error(u'Failed GET request to {} - status_code = {}'.format(url, r.status_code))
+        pass
 
 
 @app.route('/')
@@ -64,7 +83,7 @@ def mainpage():
     return render_template('index.html')
 
 
-def runserver(opts, port=8000, host=None):
+def runserver(opts, port=8000, host="0.0.0.0"):
     # Flask Global SMELL
     global app
 
