@@ -1,5 +1,4 @@
 from flask import Flask, render_template
-from flaskext.lesscss import lesscss
 from flask.ext.socketio import SocketIO, emit
 from models import Location, haversine
 import requests
@@ -107,9 +106,6 @@ def runserver(opts, port=8000, host="0.0.0.0"):
 
     app.debug = opts.debug
     app.static_path = '/static'
-
-    # turn on automatic LESS file compilation
-    lesscss(app)
 
     # put a nice Socket IO treatment around the whole app
     socketio.run(app, port=port, host=host)
