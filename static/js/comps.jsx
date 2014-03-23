@@ -36,7 +36,7 @@ var Navbar = React.createClass({
 		</div>
 		)
 	}
-});
+})
 
 
 var YourLocation = React.createClass({
@@ -74,8 +74,63 @@ var YourLocation = React.createClass({
 			return <div className="alert alert-danger">Unexpected location status</div>
 		}
 	}
-});
+})
 
+
+var ParkingSpots = React.createClass({
+	getInitialState: function() {
+		return this.props.model.toJSON()
+	},
+	handleModelChange: function() {
+		this.setState(this.props.model.toJSON())
+	},
+	componentDidMount: function() {
+		console.log('ParkingSpots:componentDidMount')
+		if (!('changeHandler' in this)) {
+			this.changeHandler = _.bind(this.handleModelChange, this)
+		}
+		model.on('change', this.changeHandler)
+	},
+	componentWillUnmount: function() {
+		console.log('ParkingSpots:componentDidUnmount')
+		model.off('change', this.changeHandler)
+	},
+	genClickHandler: function(spot) {
+		var _this = this
+		return function () {
+			_this.props.model.set({selected_spot: spot.id})
+		}
+	},
+	render: function() {
+		var locationNodes, _this = this
+		if (this.state.parking_spots.status == 'ok') {
+			locationNodes = this.state.parking_spots.locations.map(function(spot) {
+				var className = "list-group-item spot"
+				if (_this.state.selected_spot == spot.id) {
+					className += " active"
+				}
+				return (
+					<a key={'spot-' + spot.id} onClick={_this.genClickHandler(spot)} className={className}>
+						<span className="pull-right">{spot.yr_inst}</span>
+						{spot.location_name}
+					</a>
+					)
+			})
+			return (
+				<div className="well">
+					<h2>{locationNodes.length} Bike Parking Spots Found</h2>
+					<div className="list-group">
+						{locationNodes}
+					</div>
+				</div>
+				)
+		} else if (this.state.parking_spots.status == 'error') {
+			return <div className="alert alert-warning">{this.state.parking_spots.error_message}</div>
+		} else {
+			return <div className="alert alert-danger">Unexpected parking spots status.</div>
+		}
+	}
+})
 
 var Directions = React.createClass({
 	getInitialState: function() {
@@ -118,14 +173,16 @@ var Directions = React.createClass({
 			return <div className="legs"><p>No directions are available, yet.</p></div>
 		}
 	}
-});
+})
 
 var navbar = Navbar({model: model}, [])
+var parking_spots = ParkingSpots({model: model}, [])
 var directions = Directions({model: model}, [])
 var your_location = YourLocation({model: model}, [])
 
 $(function () {
 	React.renderComponent(navbar, document.getElementById('navbar'))
-	React.renderComponent(directions, document.getElementById('directions'))
 	React.renderComponent(your_location, document.getElementById('your-location'))
+	React.renderComponent(parking_spots, document.getElementById('parking-spots'))
+	React.renderComponent(directions, document.getElementById('directions'))
 })

@@ -1,6 +1,6 @@
 from os.path import join
 from peewee import (SqliteDatabase, Model, CharField, DecimalField,
-    BooleanField, IntegerField, CompositeKey,)
+    BooleanField, IntegerField, )
 from datetime import datetime
 import logging
 import requests
@@ -70,30 +70,30 @@ class Location(BaseModel):
 
     def serialize(self, opts=None):
         return {
-            'location_name' : self.location_name,
-            'yr_inst' : self.yr_inst,
-            'bike_parking' : self.bike_parking,
-            'racks_installed' : self.racks_installed,
-            'racks' : self.racks,
-            'placement' : self.placement,
-            'spaces' : self.spaces,
-            'status' : self.status,
-            'status_detail' : self.status_detail,
-            'status_description' : self.status_description,
-            'acting_agent' : self.acting_agent,
-            'action' : self.action,
-            'installed_by_2' : self.installed_by_2,
-            'yr_installed' : self.yr_installed,
-            'coord_needs_recoding' : self.coord_needs_recoding,
-            'coord_latitude' : self.coord_latitude,
-            'coord_longitude' : self.coord_longitude,
+            'id': self.id,
+            'location_name': self.location_name,
+            'yr_inst': self.yr_inst,
+            'bike_parking': self.bike_parking,
+            'racks_installed': self.racks_installed,
+            'racks': self.racks,
+            'placement': self.placement,
+            'spaces': self.spaces,
+            'status': self.status,
+            'status_detail': self.status_detail,
+            'status_description': self.status_description,
+            'acting_agent': self.acting_agent,
+            'action': self.action,
+            'installed_by_2': self.installed_by_2,
+            'yr_installed': self.yr_installed,
+            'coord_needs_recoding': self.coord_needs_recoding,
+            'coord_latitude': self.coord_latitude,
+            'coord_longitude': self.coord_longitude,
             }
 
     class Meta:
         # Use an explicitly versioned table name in case we want to
         # do data or schema migrations later.
         db_table = 'location01'
-        primary_key = CompositeKey('location_name', 'yr_inst', 'placement')
 
 
 def munge_datum(datum):
@@ -114,8 +114,6 @@ def munge_datum(datum):
 
 
 def import_location_data():
-    # HACKHACK
-    return
     now = datetime.now()
     if (now - database.last_locations_update).total_seconds() > 86400:
         r = requests.get('http://data.sfgov.org/resource/w969-5mn4.json')

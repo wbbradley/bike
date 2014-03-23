@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 from flaskext.lesscss import lesscss
 from flask.ext.socketio import SocketIO, emit
-from models import import_location_data, Location, haversine
+from models import Location, haversine
 import requests
 import logging
 
@@ -17,11 +17,6 @@ socketio = SocketIO(app)
 # A note about Flask-SocketIO: the emit call will look at the global request
 # object. A smell, for sure, but fun to use for small lightweight projects.
 
-@socketio.on('refresh', namespace='/live')
-def io_refresh_location_data(data):
-    import_location_data()
-    emit('location-data', [Location.serialize(location) for location in Location.select()])
-
 
 @socketio.on('find-nearest-query', namespace='/live')
 def io_find_nearest_query(query):
@@ -29,6 +24,7 @@ def io_find_nearest_query(query):
         # choose some reasonable defaults for now
         query.setdefault('target_class', 'bike-parking')
         query.setdefault('limit', 10)
+        query.setdefault('max_distance', 1000)
 
         # IGNORE target_class for now
         LOG.debug(u"User is at " + str(query['location']))
@@ -37,20 +33,36 @@ def io_find_nearest_query(query):
         latitude = query.get('location', {}).get('coords', {}).get('latitude', None)
         results = []
         if longitude and latitude:
-            for location in Location.select():
+            for location in Location.select().filter(Location.location_name != '_undetermined'):
                 km_distance = haversine(longitude, latitude,
                     location.coord_longitude, location.coord_latitude)
-
-                # NOTE: Reverse priority queue would be a more optimal way of doing this insertion.
-                # NOTE: See slicing below.
-                results.append({
-                    'km_distance': km_distance,
-                    'bike_parking': location.serialize()
-                    })
+                if km_distance < query['max_distance']:
+                    # NOTE: Reverse priority queue would be a more optimal way of doing this insertion.
+                    # NOTE: See slicing below.
+                    results.append({
+                        'km_distance': km_distance,
+                        'location': location.serialize()
+                        })
+                else:
+                    LOG.info('Filtering out {} because it is {}km away.'.format(location.yr_inst, km_distance))
             limit = query.get('limit')
-            emit('bike-parking-results', sorted(results, key=lambda x:x['km_distance'])[:limit])
+            LOG.info("Found {} parking spots".format(len(results)))
+            emit('bike-parking-results', {
+                'status': 'ok',
+                'locations': [result['location'] for result in sorted(results, key=lambda x:x['km_distance'])[:limit]]
+                })
         else:
             LOG.error("No lat/lon in location query")
+            emit('bike-parking-results', {
+                'status': 'error',
+                'error_message': 'No latitude/longitude in location query'
+                })
+    else:
+        LOG.error("No location specified in query.")
+        emit('bike-parking-results', {
+            'status': 'error',
+            'error_message': 'No location specified in query.'
+            })
 
 
 @socketio.on('get-directions', namespace='/live')

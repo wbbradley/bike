@@ -40,6 +40,11 @@ this.Location = Backbone.Model;
 socket = io.connect('http://' + document.domain + ':' + window.location.port + '/live');
 
 socket.on('connect', function() {
+  model.set({
+    parking_spots: {
+      status: 'searching'
+    }
+  });
   return this.emit('find-nearest-query', {
     target_class: 'bike-parking',
     limit: 10,
@@ -47,10 +52,12 @@ socket.on('connect', function() {
   });
 });
 
-socket.on('bike-parking-results', function(parking_spots) {
-  console.dir(parking_spots);
+socket.on('bike-parking-results', function(results) {
+  console.dir('bike-parking-results');
+  console.dir(results);
   return model.set({
-    parking_spots: parking_spots
+    parking_spots: results,
+    selected_spot: results.length > 0 ? results[0].id : null
   });
 });
 
@@ -64,7 +71,11 @@ socket.on('directions', function(data) {
 this.model = model = new Backbone.Model({
   location: {
     status: 'none'
-  }
+  },
+  parking_spots: {
+    status: 'none'
+  },
+  selected_spot: null
 });
 
 $(function() {

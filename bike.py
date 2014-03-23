@@ -4,7 +4,8 @@ import os
 from os.path import join, abspath, exists, expanduser, basename
 import argparse
 import logging
-from models import database_connect
+from models import database_connect, import_location_data
+
 
 LOG = logging.getLogger('bike')
 LOG.addHandler(logging.NullHandler())
@@ -19,6 +20,13 @@ def get_arg_parser():
         default=False,
         action='store_true',
         help='Debug mode.',
+        )
+    parser.add_argument(
+        '-i', '--import',
+        dest='run_import',
+        action='store_true',
+        default=False,
+        help='Perform an import of relevant data.'
         )
     parser.add_argument(
         '-d', '--db_dir',
@@ -62,6 +70,9 @@ def main(argv=None):
         system("mkdir -p '{}'".format(opts.db_dir))
 
     database_connect(opts.db_dir)
+
+    if opts.run_import:
+        import_location_data()
 
     if opts.run_server:
         from server import runserver

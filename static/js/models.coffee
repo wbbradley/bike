@@ -37,15 +37,20 @@ geoOptions =
 socket = io.connect 'http://' + document.domain + ':' + window.location.port + '/live'
 
 socket.on 'connect', ->
+  model.set
+   parking_spots:
+     status: 'searching'
   @emit 'find-nearest-query',
     target_class: 'bike-parking'
     limit: 10
     location: model.get('location')
 
-socket.on 'bike-parking-results', (parking_spots) ->
-  console.dir(parking_spots)
+socket.on 'bike-parking-results', (results) ->
+  console.dir('bike-parking-results')
+  console.dir(results)
   model.set
-   parking_spots: parking_spots
+   parking_spots: results
+   selected_spot: if (results.length > 0) then results[0].id else null
 
 socket.on 'directions', (data) ->
   console.dir(data)
@@ -53,9 +58,13 @@ socket.on 'directions', (data) ->
    routes: data
 
 
+# Initialize the client side app model
 @model = model = new Backbone.Model
   location:
     status: 'none'
+  parking_spots:
+    status: 'none'
+  selected_spot: null
 
 $ ->
   model.set
