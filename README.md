@@ -24,7 +24,8 @@ on my bike often.
     + I spent very little time on hosting and deployment for this project. I wanted to focus on building product and not worry too much about deployment.
   - Source control [https://github.com/wbbradley/bike](https://github.com/wbbradley/bike)
 
-## Code Smells
+## Woulda Shoulda
 
-There are certainly code smells and instead of listing them here, I'd love to chat in person about them when they are noticed.
+* I leave finding code smells as an exercise for the reader. Nevertheless, I will acknowledge that my coding style treads on the side of *less* commenting. I typically find it unnecessary and generally foolish to add so many comments that they themselves must be maintained and introduce technical debt.
+* I did not write a single test for this project for a couple reasons, we can discuss in person. In short, I tried to add a healthy amount of logging, and handle most if not all possible error conditions gracefully.
 
