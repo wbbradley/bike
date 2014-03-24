@@ -25,18 +25,45 @@ var Navbar = React.createBackboneClass({
 var YourLocation = React.createBackboneClass({
 	// TODO (optimization) changeOptions: "change:location",
 	render: function() {
+		var url, coords, label
+		var route, path
+
 		var location = this.props.model.get('location')
-		if (location.status == 'found') {
+		var directions = this.props.model.get('directions')
+		var selected_spot = this.props.model.get('selected_spot')
+		var sep
+
+		if (location.status == StatusChoices.Ok) {
+			coords = '' + location.coords.latitude + ',' + location.coords.longitude
+			label = encodeURIComponent('Current Loc')
+			url = "http://maps.googleapis.com/maps/api/staticmap?center=" + encodeURIComponent(coords) + "&zoom=17&size=600x300&maptype=roadmap&markers=color:blue|label:" + label + "|" + coords + "&sensor=false"
+			if (directions.status == StatusChoices.Ok && selected_spot) {
+				routes = directions.routes
+				route = routes[0]
+
+				path = '' + coords
+				_.forEach(route.legs, function (leg) {
+					_.forEach(leg.steps, function (step) {
+						path += '|' + step.start_location.lat + ',' + step.start_location.lng
+						path += '|' + step.end_location.lat + ',' + step.end_location.lng
+					})
+				})
+				url += '&path=' + encodeURIComponent(path)
+			}
+
 			return (
 				React.DOM.div( {className:"alert alert-success"}, 
-					React.DOM.h2(null, "Your location is ", location.coords.latitude,", ", location.coords.longitude)
+					React.DOM.h2(null, "Your location is ", location.coords.latitude,", ", location.coords.longitude),
+					React.DOM.div( {className:"map-image"}, 
+						React.DOM.img( {src:url} )
+					)
 				)
 				)
-		} else if (location.status == 'none') {
+		} else if (location.status == StatusChoices.Empty) {
 			return React.DOM.div( {className:"alert alert-info"}, "Your location is unknown.")
-		} else if (location.status == 'waiting') {
-			return React.DOM.div( {className:"alert alert-info"}, "Working on locating you...")
-		} else if (location.status == 'error') {
+		} else if (location.status == StatusChoices.Waiting) {
+			return React.DOM.div( {className:"alert alert-info"}, React.DOM.i( {className:"fa fa-spinner fa-spin"}), " Working on locating you...")
+		} else if (location.status == StatusChoices.Error) {
 			return React.DOM.div( {className:"alert alert-warning"}, "Failed to locate you.")
 		} else {
 			return React.DOM.div( {className:"alert alert-danger"}, "Unexpected location status")
@@ -60,10 +87,10 @@ var ParkingSpots = React.createBackboneClass({
 		var parking_spots = this.props.model.get('parking_spots')
 		var selected_spot = this.props.model.get('selected_spot')
 
-		if (parking_spots.status == 'ok') {
+		if (parking_spots.status == StatusChoices.Ok) {
 			locationNodes = parking_spots.locations.map(function(spot) {
 				var className = "list-group-item spot"
-				if (selected_spot == spot.id) {
+				if (selected_spot && selected_spot.id == spot.id) {
 					className += " active"
 				}
 				return (
@@ -81,7 +108,11 @@ var ParkingSpots = React.createBackboneClass({
 					)
 				)
 				)
-		} else if (parking_spots.status == 'error') {
+		} else if (parking_spots.status == StatusChoices.Empty) {
+			return React.DOM.div(null)
+		} else if (parking_spots.status == StatusChoices.Waiting) {
+			return React.DOM.div( {className:"alert alert-info"}, React.DOM.i( {className:"fa fa-icon fa-spin"}), " Fetching a list of parking spots for you...")
+		} else if (parking_spots.status == StatusChocies.Error) {
 			return React.DOM.div( {className:"alert alert-warning"}, parking_spots.error_message)
 		} else {
 			return React.DOM.div( {className:"alert alert-danger"}, "Unexpected parking spots status.")
@@ -91,41 +122,84 @@ var ParkingSpots = React.createBackboneClass({
 
 var Directions = React.createBackboneClass({
 	render: function() {
+		var _this = this
 		var legsNodes, routes, route
 		var directions = this.props.model.get('directions')
 		var selected_spot = this.props.model.get('selected_spot')
 
-		if (directions.status == 'ok') {
+		if (directions.status == StatusChoices.Ok && selected_spot) {
 			routes = directions.routes
-			// TODO for the moment we are choosing the
+			// NOTE for the moment we are choosing the
 			// first route, eventually, we'd like folks
 			// to be able to pick other routes
 			route = routes[0]
 			if (route && 'legs' in route) {
 				legsNodes = route.legs.map(function (leg) {
 					var stepsNodes = leg.steps.map(function (step) {
-						return React.DOM.div( {className:"instructions", dangerouslySetInnerHTML:{__html: step.html_instructions}})
+						return (
+							React.DOM.li( {className:"step"}, 
+								React.DOM.div( {className:"distance"}, step.distance.text),
+								React.DOM.span( {dangerouslySetInnerHTML:{__html: step.html_instructions}})
+							)
+							)
 					})
-					return React.DOM.div( {className:"leg"}, stepsNodes)
+					return React.DOM.ol( {className:"instructions"}, stepsNodes)
 				})
-				return React.DOM.div( {className:"legs"}, legsNodes)
+				return (
+					React.DOM.div( {className:"directions"}, 
+						React.DOM.h2(null, "Directions to ", selected_spot.yr_inst),
+						React.DOM.h3(null, "Summary: ", route.summary),
+						React.DOM.div( {className:"legs"}, legsNodes)
+					)
+					)
 			} else {
-				return React.DOM.div( {className:"legs"}, React.DOM.p(null, "This journey has no known path."))
+				return (
+					React.DOM.div( {className:"directions"}, 
+						React.DOM.p(null, "This journey has no known path.")
+					)
+					)
 			}
-		} else {
-			return React.DOM.div( {className:"legs"}, React.DOM.p(null, "No directions are available, yet."))
+		} else if (directions.status == StatusChoices.Empty) {
+			return (
+				React.DOM.div( {className:"directions"})
+				)
+		} else if (directions.status == StatusChoices.Error) {
+			return (
+				React.DOM.div( {className:"directions"}, 
+					React.DOM.div( {className:"alert alert-warning"}, "An error occurred while fetching those directions for you. Please try again later.")
+				)
+				)
+		} else if (directions.status == StatusChoices.Waiting) {
+			return (
+				React.DOM.div( {className:"directions"}, 
+					React.DOM.p(null, 
+						React.DOM.i( {className:"fa fa-spinner fa-spin"}), " Fetching directions..."
+					)
+				)
+				)
 		}
 	}
 })
 
-var navbar = Navbar({model: model}, [])
-var parking_spots = ParkingSpots({model: model}, [])
-var directions = Directions({model: model}, [])
-var your_location = YourLocation({model: model}, [])
+var MainContent = React.createClass({displayName: 'MainContent',
+	render: function() {
+		return (
+			React.DOM.div(null, 
+				YourLocation( {model:this.props.model}),
+				React.DOM.div( {className:"row"}, 
+					React.DOM.div( {className:"col-xs-12 col-sm-6"}, 
+						ParkingSpots( {model:this.props.model})
+					),
+					React.DOM.div( {className:"col-xs-12 col-sm-6"}, 
+						Directions( {model:this.props.model})
+					)
+				)
+			)
+			)
+	}
+})
 
 $(function () {
-	React.renderComponent(navbar, document.getElementById('navbar'))
-	React.renderComponent(your_location, document.getElementById('your-location'))
-	React.renderComponent(parking_spots, document.getElementById('parking-spots'))
-	React.renderComponent(directions, document.getElementById('directions'))
+	React.renderComponent(Navbar( {model:model}), document.getElementById('navbar'))
+	React.renderComponent(MainContent( {model:model}), document.getElementById('main-content'))
 })

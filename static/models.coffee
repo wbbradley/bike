@@ -1,9 +1,10 @@
 # all asynchronous model properties contain a status
 # # variable which can take one of the following states:
-#   'none'
-#   'waiting'
-#   'found'
-#   'error'
+class StatusChoices
+  @Ok = 'ok'
+  @Empty = 'empty'
+  @Waiting = 'waiting'
+  @Error = 'error'
 
 geoSuccess = (current_location) ->
   if current_location
@@ -11,7 +12,7 @@ geoSuccess = (current_location) ->
       location:
         timestamp: current_location.timestamp
         coords: current_location.coords
-        status: 'found'
+        status: 'ok'
 
     socket.emit 'find-nearest-query',
       target_class: 'bike-parking'
@@ -24,7 +25,7 @@ geoError = () ->
     location:
       timestamp: (new Date()).getTime() / 1000.0
       coords: null
-      status: 'error'
+      status: StatusChoices.Error
 
 geoOptions =
   enableHighAccuracy: true
@@ -36,20 +37,30 @@ geoOptions =
 socket = io.connect 'http://' + document.domain + ':' + window.location.port + '/live'
 
 socket.on 'connect', ->
-  model.set
-   parking_spots:
-     status: 'searching'
-  @emit 'find-nearest-query',
-    target_class: 'bike-parking'
-    limit: 10
-    location: model.get('location')
+  if model.get('location')?.status is StatusChoices.Ok
+    model.set
+     parking_spots:
+       status: StatusChoices.Waiting
+    @emit 'find-nearest-query',
+      target_class: 'bike-parking'
+      limit: 10
+      location: model.get('location')
+  else
+    model.set
+     parking_spots:
+       status: StatusChoices.Empty
 
 socket.on 'bike-parking-results', (results) ->
   console.log('bike-parking-results')
   console.dir(results)
+
+  # stash the parking spot results in our data model
   model.set
    parking_spots: results
-   selected_spot: if (results.length > 0) then results[0].id else null
+
+  # Go ahead and select the first result for the user
+  selectSpot model, model.get('parking_spots')?.locations?[0]
+
 
 socket.on 'directions', (data) ->
   console.log('directions')
@@ -57,23 +68,34 @@ socket.on 'directions', (data) ->
   model.set
    directions: data
 
+class Bike extends Backbone.Model
+  clear: =>
+    @set
+      location:
+        status: StatusChoices.Empty
+      parking_spots:
+        status: StatusChoices.Empty
+      selected_spot: null
+      directions:
+        status: StatusChoices.Empty
+
+  initialize: =>
+    super
+    @clear
 
 # Initialize the client side app model
-@model = model = new Backbone.Model
-  location:
-    status: 'none'
-  parking_spots:
-    status: 'none'
-  selected_spot: null
-  directions:
-    status: 'none'
+@model = model = new Bike
 
-$ ->
+startGeolocation = ->
+  model.clear()
   model.set
     location:
-      status: 'waiting'
+      status: StatusChoices.Waiting
   navigator?.geolocation?.getCurrentPosition geoSuccess, geoError, geoOptions
 
+
+# upon page load, let's go ahead and start the geolocation process
+$ -> do startGeolocation
 
 getDirections = (model) ->
   # Let's query the server for directions.
@@ -82,27 +104,24 @@ getDirections = (model) ->
   current_location = model.get('location')
   selected_spot = model.get('selected_spot')
 
-  if selected_spot and parking_spots?.status is 'ok' and current_location?.status is 'found'
-    parking_spot = _.find parking_spots.locations, id: selected_spot
+  if selected_spot and current_location?.status is 'ok'
     model.set
       directions:
-        status: 'waiting'
+        status: StatusChoices.Waiting
 
     socket.emit 'get-directions',
       origin:
         latitude: current_location.coords.latitude
         longitude: current_location.coords.longitude
       destination:
-        latitude: parking_spot.coord_latitude
-        longitude: parking_spot.coord_longitude
+        latitude: selected_spot.coord_latitude
+        longitude: selected_spot.coord_longitude
       travel_mode: 'bicycling'
   else
     console.warn "We don't yet have results from our bike-parking query."
 
 selectSpot = (model, spot) ->
-  if model.get('selected_spot') isnt spot.id
-    model.set
-      selected_spot: spot.id
-    getDirections model
+  model.set selected_spot: spot
+  getDirections model
 
 @socket = socket

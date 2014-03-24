@@ -7,6 +7,13 @@ import requests
 from math import radians, cos, sin, asin, sqrt
 
 
+class StatusChoices(object):
+    Ok = 'ok'
+    Waiting = 'waiting'
+    Error = 'error'
+    Empty = 'empty'
+
+
 # code mercilessly stolen from
 # http://stackoverflow.com/questions/4913349/haversine-formula-in-python-bearing-and-distance-between-two-gps-points
 def haversine(lon1, lat1, lon2, lat2):

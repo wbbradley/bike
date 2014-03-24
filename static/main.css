@@ -144,3 +144,9 @@ input {
   width: 1%;
   padding: 0 3px;
 }
+.directions .step {
+  position: relative;
+}
+.directions .step .distance {
+  float: right;
+}

@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 from flask.ext.socketio import SocketIO, emit
-from models import Location, haversine
+from models import Location, haversine, StatusChoices
 import requests
 import logging
 
@@ -47,19 +47,19 @@ def io_find_nearest_query(query):
             limit = query.get('limit')
             LOG.info("Found {} parking spots".format(len(results)))
             emit('bike-parking-results', {
-                'status': 'ok',
+                'status': StatusChoices.Ok,
                 'locations': [result['location'] for result in sorted(results, key=lambda x:x['km_distance'])[:limit]]
                 })
-        else:
-            LOG.error("No lat/lon in location query")
-            emit('bike-parking-results', {
-                'status': 'error',
-                'error_message': 'No latitude/longitude in location query'
-                })
+        # else:
+            # LOG.error("No lat/lon in location query")
+            # emit('bike-parking-results', {
+                # 'status': 'error',
+                # 'error_message': 'No latitude/longitude in location query'
+                # })
     else:
         LOG.error("No location specified in query.")
         emit('bike-parking-results', {
-            'status': 'error',
+            'status': StatusChoices.Error,
             'error_message': 'No location specified in query.'
             })
 
@@ -79,7 +79,7 @@ def io_get_directions(query):
         if result.get('status') == 'OK':
             LOG.info('Sending directions to client. {}'.format(result.get('routes')))
             emit('directions', {
-                'status': 'ok',
+                'status': StatusChoices.Ok,
                 'routes': result.get('routes'),
                 })
             return
@@ -87,7 +87,7 @@ def io_get_directions(query):
             LOG.error(u'Failed GET request to {}'.format(url))
 
         emit('directions', {
-            'status': 'error',
+            'status': StatusChoices.Error,
             'error_message': result.get('error_message', 'An unknown error occurred.'),
             })
     else:
