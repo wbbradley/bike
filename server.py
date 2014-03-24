@@ -9,7 +9,7 @@ LOG = logging.getLogger('bike')
 
 global app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'Uber is Cool'
+app.config['SECRET_KEY'] = ']^@3D*4bO;7PZDr5erPqS4Nr6<5nf_'
 socketio = SocketIO(app)
 
 
@@ -17,12 +17,59 @@ socketio = SocketIO(app)
 # object. A smell, for sure, but fun to use for small lightweight projects.
 
 
+@socketio.on('geolocate', namespace='/live')
+def io_geolocate(query):
+    url = 'http://maps.googleapis.com/maps/api/geocode/json?sensor=false&address=' + query['search']
+    r = requests.get(url)
+    if 200 <= r.status_code < 300:
+        result = r.json()
+        if result.get('status') == 'OK':
+            emit('geolocation', {
+                'status': StatusChoices.Ok,
+                'results': result.get('results'),
+                })
+            return
+        else:
+            LOG.error(u'Failed GET request to {}'.format(url))
+
+        emit('geolocation', {
+            'status': StatusChoices.Error,
+            'error_message': result.get('error_message', 'An unknown error occurred.'),
+            })
+    else:
+        LOG.error(u'Failed GET request to {} - status_code = {}'.format(url, r.status_code))
+        pass
+
+@socketio.on('reverse-geolocate', namespace='/live')
+def io_reverse_geolocate(query):
+    url = 'http://maps.googleapis.com/maps/api/geocode/json?sensor=false&latlng=' + str(query['coords']['latitude']) + ',' + str(query['coords']['longitude'])
+    r = requests.get(url)
+    if 200 <= r.status_code < 300:
+        result = r.json()
+        if result.get('status') == 'OK':
+            emit('reverse-geolocation', {
+                'status': StatusChoices.Ok,
+                'results': result.get('results'),
+                })
+            return
+        else:
+            LOG.error(u'Failed GET request to {}'.format(url))
+
+        emit('reverse-geolocation', {
+            'status': StatusChoices.Error,
+            'error_message': result.get('error_message', 'An unknown error occurred.'),
+            })
+    else:
+        LOG.error(u'Failed GET request to {} - status_code = {}'.format(url, r.status_code))
+        pass
+
+
 @socketio.on('find-nearest-query', namespace='/live')
 def io_find_nearest_query(query):
     if 'location' in query:
         # choose some reasonable defaults for now
         query.setdefault('target_class', 'bike-parking')
-        query.setdefault('limit', 10)
+        query.setdefault('limit', 5)
         query.setdefault('max_distance', 1000)
 
         # IGNORE target_class for now
@@ -100,7 +147,7 @@ def mainpage():
     return render_template('index.html')
 
 
-def runserver(opts, port=8000, host="0.0.0.0"):
+def runserver(opts, port=8080, host="0.0.0.0"):
     # Flask Global SMELL
     global app
 

@@ -5,3 +5,6 @@ jquery*
 react*
 socketio
 JSX*
+static/comps.js
+static/models.js
+static/main.css

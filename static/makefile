@@ -8,19 +8,19 @@ all: $(OUTPUT_FILES)
 
 %.js: %.jsx
 	@echo Compiling $<...
-	@jsx $< > $@
+	@jsx $< > $@ || say 'j s x'
 	@echo No errors in $<.
 
 
 %.js: %.coffee
 	@echo Compiling $<...
-	@coffee -bcp $< > $@
+	@coffee -bcp $< > $@ || say 'coffee'
 	@echo No errors in $<.
 
 %.css: %.less
 	@mkdir -p css
 	@echo Compiling $<...
-	@lessc $< > $@
+	@lessc $< > $@ || say 'less'
 	@echo No errors in $<.
 
 

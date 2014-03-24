@@ -5,7 +5,7 @@ from os.path import join, abspath, exists, expanduser, basename
 import argparse
 import logging
 from models import database_connect, import_location_data
-
+from server import app
 
 LOG = logging.getLogger('bike')
 LOG.addHandler(logging.NullHandler())
@@ -35,11 +35,11 @@ def get_arg_parser():
         help='Specify the folder where the root DB will be stored.',
         )
     parser.add_argument(
-        '-S', '--server',
+        '-n', '--no-server',
         dest='run_server',
-        action='store_true',
-        default=False,
-        help='Run the server.',
+        action='store_false',
+        default=True,
+        help='Do not run the server.',
         )
     return parser
 
@@ -52,19 +52,16 @@ def system(cmd):
 
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv[1:]
-
+def main(argv=[]):
     parser = get_arg_parser()
     opts = parser.parse_args(argv)
 
     if opts.debug:
         LOG.setLevel(logging.DEBUG)
         LOG.addHandler(logging.StreamHandler())
-        # db_logger = logging.getLogger('peewee')
-        # db_logger.setLevel(logging.DEBUG)
-        # db_logger.addHandler(logging.StreamHandler())
+        db_logger = logging.getLogger('peewee')
+        db_logger.setLevel(logging.DEBUG)
+        db_logger.addHandler(logging.StreamHandler())
     
     if not exists(opts.db_dir):
         system("mkdir -p '{}'".format(opts.db_dir))
@@ -76,8 +73,12 @@ def main(argv=None):
 
     if opts.run_server:
         from server import runserver
-        return runserver(opts=opts)
+        kwargs = {}
+        port = int(os.getenv('PORT', 0))
+        if port:
+            kwargs['port'] = port
+        return runserver(opts=opts, **kwargs)
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
