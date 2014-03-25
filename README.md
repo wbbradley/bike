@@ -1,7 +1,7 @@
 Bike - Will Bradley
 ====================
 
-Here is an implementation of a Bike parking spot finder. 
+[Here (http://nearbyparking.co)](http://nearbyparking.co/) is an implementation of a Bike parking spot finder. 
 
 # Notes
 * I chose to implement the Bicycle Parking project because cycling is something I enjoy. I commute to work
