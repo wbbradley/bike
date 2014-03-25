@@ -23,7 +23,8 @@ var Navbar = React.createBackboneClass({
 				<div className="container">
 					<div className="navbar-header">
 						<button type="button" className="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"><span className="sr-only">Toggle navigation</span><span className="icon-bar"></span><span className="icon-bar"></span><span className="icon-bar"></span></button>
-						<a className="navbar-brand" href="#">Find Bike Racks</a>
+						<a className="navbar-brand brand-image"><img src="/static/img/nearbyparking.svg"/></a>
+						<a className="navbar-brand">nearbyparking.co</a>
 					</div>
 					<div className="navbar-collapse collapse">
 						<ul className="nav navbar-nav">
@@ -261,6 +262,17 @@ var MainContent = React.createClass({
 	render: function() {
 		return (
 			<div>
+				<div class="page-header">
+					<h1>nearbyparking.co <small>remember your lock!</small></h1>
+					<p>
+						Welcome to nearbyparking.co. This site is designed to let
+						you quickly find a parking spot for your bike. Data is
+						sourced from <a href="https://data.sfgov.org/Transportation/Bicycle-Parking-Public-/w969-5mn4">Data SF: Bicycle Parking</a>.
+					</p>
+					<p>
+						After you&rsquo;ve located yourself on the map, try selecting alternate parking locations.
+					</p>
+				</div>
 				<YourLocation model={this.props.model}/>
 				<div className="row">
 					<div className="col-xs-12 col-sm-6">
@@ -270,6 +282,9 @@ var MainContent = React.createClass({
 						<Directions model={this.props.model}/>
 					</div>
 				</div>
+				<p>
+					Thanks for visiting.
+				</p>
 			</div>
 			)
 	}

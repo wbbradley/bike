@@ -23,7 +23,8 @@ var Navbar = React.createBackboneClass({
 				React.DOM.div( {className:"container"}, 
 					React.DOM.div( {className:"navbar-header"}, 
 						React.DOM.button( {type:"button", className:"navbar-toggle", 'data-toggle':"collapse", 'data-target':".navbar-collapse"}, React.DOM.span( {className:"sr-only"}, "Toggle navigation"),React.DOM.span( {className:"icon-bar"}),React.DOM.span( {className:"icon-bar"}),React.DOM.span( {className:"icon-bar"})),
-						React.DOM.a( {className:"navbar-brand", href:"#"}, "Find Bike Racks")
+						React.DOM.a( {className:"navbar-brand brand-image"}, React.DOM.img( {src:"/static/img/nearbyparking.svg"})),
+						React.DOM.a( {className:"navbar-brand"}, "nearbyparking.co")
 					),
 					React.DOM.div( {className:"navbar-collapse collapse"}, 
 						React.DOM.ul( {className:"nav navbar-nav"}, 
@@ -58,7 +59,7 @@ var YourLocation = React.createBackboneClass({
 	},
 	render: function() {
 		var url, end_coords, label
-		var route, path
+		var route, path, paths
 
 		var location = this.props.model.get('location')
 		var geoloc = this.props.model.get('geoloc')
@@ -261,6 +262,17 @@ var MainContent = React.createClass({displayName: 'MainContent',
 	render: function() {
 		return (
 			React.DOM.div(null, 
+				React.DOM.div( {class:"page-header"}, 
+					React.DOM.h1(null, "nearbyparking.co ", React.DOM.small(null, "remember your lock!")),
+					React.DOM.p(null, 
+						"Welcome to nearbyparking.co. This site is designed to let"+' '+
+						"you quickly find a parking spot for your bike. Data is"+' '+
+						"sourced from ", React.DOM.a( {href:"https://data.sfgov.org/Transportation/Bicycle-Parking-Public-/w969-5mn4"}, "Data SF: Bicycle Parking"),"."
+					),
+					React.DOM.p(null, 
+						"After you’ve located yourself on the map, try selecting alternate parking locations."
+					)
+				),
 				YourLocation( {model:this.props.model}),
 				React.DOM.div( {className:"row"}, 
 					React.DOM.div( {className:"col-xs-12 col-sm-6"}, 
@@ -269,6 +281,9 @@ var MainContent = React.createClass({displayName: 'MainContent',
 					React.DOM.div( {className:"col-xs-12 col-sm-6"}, 
 						Directions( {model:this.props.model})
 					)
+				),
+				React.DOM.p(null, 
+					"Thanks for visiting."
 				)
 			)
 			)

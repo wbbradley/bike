@@ -134,7 +134,12 @@ input {
 }
 @media (min-width: 767px ) {
   .navbar input[type="text"] {
-    width: 380px;
+    width: 330px;
+  }
+}
+@media (min-width: 991px ) {
+  .navbar input[type="text"] {
+    width: 500px;
   }
 }
 .navbar-form-field {
@@ -197,4 +202,11 @@ input {
 }
 .your-location {
   text-align: center;
+}
+.navbar-brand.brand-image {
+  margin-top: -5px;
+  margin-left: 15px;
+}
+.navbar-brand.brand-image img {
+  height: 100%;
 }
